@@ -6,32 +6,52 @@ use super::{GlowInstance, GlowPipeline};
 
 struct GlowState {
     time: f32,
+    was_active: bool,
 }
 
 impl GlowState {
-    fn size(&self) -> f32 {
-        // Premium intense glow
-        180.0 + self.time.sin() * 25.0 + (self.time * 2.0).cos() * 15.0
+    fn new() -> Self {
+        Self {
+            time: 0.0,
+            was_active: false,
+        }
     }
 
-    fn update(&mut self, delta: Duration) {
-        self.time += delta.as_secs_f32() * 4.0;
+    fn size(&self) -> f32 {
+        // MUCH LARGER glow area so particles have room to fly
+        // Burst starts big, settles to steady state
+        let burst = (-self.time * 2.0).exp() * 150.0;
+        350.0 + burst  // Very large to give particles travel distance
+    }
+
+    fn update(&mut self, delta: Duration, is_active: bool) {
+        if is_active {
+            if !self.was_active {
+                self.time = 0.0;  // Reset on new press
+            }
+            self.time += delta.as_secs_f32() * 3.0;
+        } else {
+            self.time = 0.0;
+        }
+        self.was_active = is_active;
     }
 
     fn calc_color(&self, color: Color) -> [f32; 4] {
         let mut color = color.into_linear_rgba();
         
-        // Dynamic pulse for living feel
-        let pulse = 0.15 * self.time.cos().abs() + 0.1 * (self.time * 1.7).sin().abs();
+        // Bright flash on press
+        let flash = (-self.time * 5.0).exp() * 0.5;
         
-        // Brighten significantly
-        color[0] = (color[0] * 1.3 + pulse * 0.5).min(1.5);
-        color[1] = (color[1] * 1.2 + pulse * 0.4).min(1.3);
-        color[2] = (color[2] * 1.1 + pulse * 0.3).min(1.2);
+        color[0] = (color[0] * 1.3 + flash).min(1.5);
+        color[1] = (color[1] * 1.2 + flash * 0.8).min(1.3);
+        color[2] = (color[2] * 1.1 + flash * 0.5).min(1.2);
+        color[3] = 0.8;
         
-        // Strong alpha for visible glow
-        color[3] = 0.65;
         color
+    }
+    
+    fn get_time(&self) -> f32 {
+        self.time
     }
 }
 
@@ -51,7 +71,7 @@ impl GlowRenderer {
         let states: Vec<GlowState> = layout
             .range
             .iter()
-            .map(|_| GlowState { time: 0.0 })
+            .map(|_| GlowState::new())
             .collect();
 
         Self { pipeline, states }
@@ -79,16 +99,27 @@ impl GlowRenderer {
         delta: Duration,
     ) {
         let state = &mut self.states[id];
-        state.update(delta);
+        state.update(delta, true);
 
         let color = state.calc_color(color);
         let glow_w = state.size();
         let glow_h = glow_w;
+        let time = state.get_time();
 
         self.pipeline.instances().push(GlowInstance {
             position: [key_x - glow_w / 2.0 + key_w / 2.0, key_y - glow_w / 2.0],
             size: [glow_w, glow_h],
             color,
+            time,
+            _padding: 0.0,
         });
+    }
+    
+    pub fn update_inactive(&mut self, delta: Duration) {
+        for state in self.states.iter_mut() {
+            if state.was_active {
+                state.update(delta, false);
+            }
+        }
     }
 }

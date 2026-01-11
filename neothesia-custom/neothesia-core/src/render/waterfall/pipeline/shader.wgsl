@@ -95,19 +95,15 @@ fn dist(
 }
 
 // ============================================================
-// PREMIUM NOTE RENDERING - CLIPPED AT PLAY LINE
+// PREMIUM TRANSLUCENT GLASS NOTE RENDERING
 // ============================================================
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // ===== HARD CLIP NOTES AT KEYBOARD (play line) =====
-    // Anything at or below keyboard line gets discarded
+    // ===== CLIP AT KEYBOARD =====
     if in.world_y >= in.keyboard_y - 2.0 {
         discard;
     }
-    
-    // No fade - hard clip
-    let keyboard_fade = 1.0;
 
     let dist_val: f32 = dist(
         in.position.xy,
@@ -124,45 +120,66 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     
     let uv = in.src_position;
     
-    // ===== HORIZONTAL SCANLINE TEXTURE =====
-    let stripe_freq = 35.0;
-    let stripe_y = uv.y * stripe_freq;
-    let stripe_raw = fract(stripe_y);
-    let stripe = smoothstep(0.25, 0.45, stripe_raw) * smoothstep(0.75, 0.55, stripe_raw);
-    let stripe_intensity = 0.35 + stripe * 0.65;
+    // ===== GLASS BASE COLOR =====
+    // Start with the note color, slightly darkened for depth
+    var glass_color = in.color * 0.7;
     
-    // ===== BASE COLOR with stripe modulation =====
-    var note_color = in.color * stripe_intensity;
+    // ===== GLOSSY TOP HIGHLIGHT =====
+    // Sharp white reflection at top like light on glass
+    let top_highlight = exp(-uv.y * uv.y * 80.0) * 0.9;
+    glass_color = glass_color + vec3<f32>(top_highlight);
     
-    // ===== TOP BRIGHT EDGE =====
-    let top_edge = smoothstep(0.1, 0.0, uv.y) * 0.8;
-    note_color = note_color + vec3<f32>(top_edge);
+    // ===== SOFT TOP GRADIENT =====
+    // Broader highlight gradient
+    let top_gradient = (1.0 - uv.y) * 0.25;
+    glass_color = glass_color + vec3<f32>(top_gradient * 0.5);
     
-    // ===== LEFT/RIGHT EDGE HIGHLIGHTS =====
-    let left_edge = smoothstep(0.05, 0.0, uv.x) * 0.3;
-    let right_edge = smoothstep(0.95, 1.0, uv.x) * 0.15;
-    note_color = note_color + vec3<f32>(left_edge + right_edge);
+    // ===== LEFT EDGE REFLECTION =====
+    // Glass catches light on edges
+    let left_edge = exp(-uv.x * uv.x * 150.0) * 0.4;
+    glass_color = glass_color + vec3<f32>(left_edge);
     
-    // ===== INTERNAL GLOW - brighter center =====
-    let center_dist = abs(uv.x - 0.5);
-    let center_glow = (1.0 - center_dist * 1.5) * 0.2;
-    note_color = note_color + in.color * max(center_glow, 0.0);
+    // ===== RIGHT EDGE SUBTLE HIGHLIGHT =====
+    let right_x = 1.0 - uv.x;
+    let right_edge = exp(-right_x * right_x * 200.0) * 0.2;
+    glass_color = glass_color + vec3<f32>(right_edge);
     
-    // ===== BOTTOM GLOW (approaching play line) =====
-    let bottom_proximity = smoothstep(0.7, 1.0, uv.y);
-    let bottom_glow = bottom_proximity * 0.4;
-    note_color = note_color + in.color * bottom_glow;
+    // ===== INTERNAL LUMINOSITY =====
+    // Glass has internal glow - brighter toward center
+    let center_x = abs(uv.x - 0.5);
+    let center_glow = (1.0 - center_x * 2.0) * 0.2;
+    glass_color = glass_color + in.color * max(center_glow, 0.0);
     
-    // ===== OUTER GLOW/BLOOM EFFECT =====
+    // ===== DEPTH GRADIENT =====
+    // Subtle darkening toward bottom for 3D effect
+    let depth = uv.y * 0.15;
+    glass_color = glass_color - vec3<f32>(depth * 0.3);
+    
+    // ===== BOTTOM GLOW (approaching keyboard) =====
+    // Notes glow brighter as they approach the play line
+    let bottom_proximity = smoothstep(0.6, 1.0, uv.y);
+    let bottom_glow = bottom_proximity * 0.35;
+    glass_color = glass_color + in.color * bottom_glow;
+    
+    // ===== SUBTLE INNER SHADOW =====
+    // Creates depth perception
     let edge_x = min(uv.x, 1.0 - uv.x);
     let edge_y = min(uv.y, 1.0 - uv.y);
-    let edge_dist = min(edge_x, edge_y);
-    let outer_glow = smoothstep(0.15, 0.0, edge_dist) * 0.5;
-    note_color = note_color + in.color * outer_glow;
+    let inner_shadow = smoothstep(0.0, 0.1, min(edge_x, edge_y));
+    glass_color = glass_color * (0.85 + inner_shadow * 0.15);
+    
+    // ===== THIN BRIGHT BORDER =====
+    // Glass has a bright edge where light refracts
+    let border_dist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    let border = smoothstep(0.03, 0.0, border_dist) * 0.5;
+    glass_color = glass_color + vec3<f32>(border * 0.4) + in.color * border * 0.3;
+    
+    // ===== TRANSLUCENT ALPHA =====
+    // Glass is slightly transparent
+    let translucency = 0.92;
     
     // Clamp colors
-    note_color = clamp(note_color, vec3<f32>(0.0), vec3<f32>(1.3));
+    glass_color = clamp(glass_color, vec3<f32>(0.0), vec3<f32>(1.2));
 
-    // Apply keyboard fade
-    return vec4<f32>(note_color, base_alpha * keyboard_fade);
+    return vec4<f32>(glass_color, base_alpha * translucency);
 }

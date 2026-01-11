@@ -23,97 +23,40 @@ fn vs_main(vertex: Vertex) -> VertexOutput {
 }
 
 // ============================================================
-// NOISE FUNCTIONS
+// HASH FUNCTIONS
 // ============================================================
 
 fn hash(p: vec2<f32>) -> f32 {
-    return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
+    var p3 = fract(vec3<f32>(p.x, p.y, p.x) * 0.1031);
+    p3 = p3 + dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-fn noise(p: vec2<f32>) -> f32 {
-    let i = floor(p);
-    let f = fract(p);
-    let u = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(hash(i), hash(i + vec2<f32>(1.0, 0.0)), u.x),
-        mix(hash(i + vec2<f32>(0.0, 1.0)), hash(i + vec2<f32>(1.0, 1.0)), u.x),
-        u.y
+fn hash3(p: vec2<f32>) -> vec3<f32> {
+    return vec3<f32>(
+        hash(p),
+        hash(p + vec2<f32>(127.1, 311.7)),
+        hash(p + vec2<f32>(269.5, 183.3))
     );
 }
 
-fn fbm(p: vec2<f32>) -> f32 {
-    var value = 0.0;
-    var amplitude = 0.5;
-    var pos = p;
-    for (var i = 0; i < 4; i++) {
-        value += amplitude * noise(pos);
-        amplitude *= 0.5;
-        pos *= 2.0;
-    }
-    return value;
+// ============================================================
+// STAR/SPARKLE SHAPE
+// ============================================================
+
+fn star_shape(uv: vec2<f32>, center: vec2<f32>, size: f32, rotation: f32) -> f32 {
+    let d = uv - center;
+    let angle = atan2(d.y, d.x) + rotation;
+    let dist = length(d);
+    
+    let star = abs(cos(angle * 2.0)) * 0.5 + 0.5;
+    let star_dist = dist / (size * (0.3 + star * 0.7));
+    
+    return exp(-star_dist * star_dist * 8.0);
 }
 
 // ============================================================
-// PARTICLE SPARKS - Rising ember effect (sparse)
-// ============================================================
-
-fn spark(uv: vec2<f32>, time: f32, id: f32) -> f32 {
-    let h1 = hash(vec2<f32>(id, id * 1.3));
-    let h2 = hash(vec2<f32>(id * 2.1, id));
-    
-    // Lifecycle
-    let lifecycle = fract(time * (0.06 + h1 * 0.04) + h2);
-    
-    // Start from play line (y=0.20) and rise UP (y increases)
-    let x = h1;
-    let y = 0.22 + lifecycle * 0.5;
-    
-    // Only show particles below top
-    if y > 0.85 {
-        return 0.0;
-    }
-    
-    // Wandering motion
-    let wander = sin(lifecycle * 6.0 + id * 4.0) * 0.015;
-    let pos = vec2<f32>(x + wander, y);
-    
-    let d = distance(uv, pos);
-    let size = 0.001 + h2 * 0.0015;
-    
-    // Fade in/out
-    let fade = sin(lifecycle * 3.14159);
-    
-    let core = smoothstep(size, 0.0, d);
-    let glow = smoothstep(size * 2.5, 0.0, d) * 0.2;
-    
-    return (core + glow) * fade;
-}
-
-// ============================================================
-// SMOKE WISPS - Very subtle rising smoke
-// ============================================================
-
-fn smoke(uv: vec2<f32>, time: f32) -> f32 {
-    // Only near play line (which is at y ≈ 0.20)
-    if uv.y < 0.15 || uv.y > 0.35 {
-        return 0.0;
-    }
-    
-    var p = uv * vec2<f32>(4.0, 2.0);
-    p.y += time * 0.06; // Rising smoke
-    p.x += sin(p.y * 2.5 + time * 0.4) * 0.15;
-    
-    let n = fbm(p);
-    
-    // Tight fade around play line
-    let dist = abs(uv.y - 0.22);
-    let fade = 1.0 - smoothstep(0.0, 0.1, dist);
-    
-    return n * fade * 0.06;
-}
-
-// ============================================================
-// MAIN - PURE BLACK WITH GOLDEN PLAY LINE
+// MAIN - CLEAN DARK BACKGROUND WITH ELEGANT PARTICLES
 // ============================================================
 
 @fragment
@@ -124,51 +67,104 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // ===== PURE BLACK BACKGROUND =====
     var color = vec3<f32>(0.0, 0.0, 0.0);
     
-    // ===== SINGLE GOLDEN PLAY LINE (at keyboard top) =====
-    // In this coordinate system: y=0 is BOTTOM, y=1 is TOP
-    // Keyboard occupies bottom 20%, so play line is at y ≈ 0.20
+    // ===== BRIGHT GOLDEN PLAY LINE =====
     let play_line_y = 0.205;
     let dist_from_line = abs(uv.y - play_line_y);
     
-    // Only render near the line
-    if dist_from_line < 0.15 {
-        // Intense bright core
-        let line_core = smoothstep(0.0015, 0.0, dist_from_line) * 1.8;
+    let line_core = exp(-dist_from_line * dist_from_line * 120000.0) * 2.5;
+    let line_glow1 = exp(-dist_from_line * dist_from_line * 15000.0) * 1.2;
+    let line_glow2 = exp(-dist_from_line * dist_from_line * 2000.0) * 0.5;
+    let line_glow3 = exp(-dist_from_line * dist_from_line * 500.0) * 0.2;
+    
+    let line_total = line_core + line_glow1 + line_glow2 + line_glow3;
+    let golden = vec3<f32>(1.0, 0.8, 0.3);
+    let white_hot = vec3<f32>(1.0, 0.98, 0.92);
+    let line_color = mix(golden, white_hot, clamp(line_core * 0.4, 0.0, 1.0));
+    color = color + line_color * line_total;
+    
+    // ===== RISING EMBER SPARKS WITH TRAILS =====
+    for (var i = 0; i < 45; i++) {
+        let id = f32(i);
+        let h = hash3(vec2<f32>(id * 1.23, id * 0.77));
         
-        // Glow layers
-        let glow1 = smoothstep(0.012, 0.0, dist_from_line) * 0.9;
-        let glow2 = smoothstep(0.035, 0.0, dist_from_line) * 0.45;
-        let glow3 = smoothstep(0.08, 0.0, dist_from_line) * 0.2;
-        let glow4 = smoothstep(0.15, 0.0, dist_from_line) * 0.08;
+        let speed = 0.025 + h.x * 0.035;
+        let lifecycle = fract(time * speed + h.y);
+        let x = h.z + sin(lifecycle * 6.28 + id) * 0.025;
+        let y = lifecycle;
+        let pos = vec2<f32>(fract(x), y);
         
-        let line_total = line_core + glow1 + glow2 + glow3 + glow4;
-        
-        // Golden to white-hot gradient
-        let golden = vec3<f32>(1.0, 0.78, 0.2);
-        let white = vec3<f32>(1.0, 1.0, 0.92);
-        let line_color = mix(golden, white, clamp(line_core * 0.4, 0.0, 1.0));
-        
-        color = color + line_color * line_total;
+        if pos.y > 0.23 && pos.y < 0.93 {
+            let size = 0.0025 + h.x * 0.003;
+            
+            // Fade in/out smoothly
+            let fade = sin((pos.y - 0.23) / 0.70 * 3.14159);
+            
+            // Twinkle effect
+            let twinkle = 0.4 + 0.6 * pow(0.5 + 0.5 * sin(time * (4.0 + h.x * 8.0) + id * 5.0), 2.0);
+            
+            // Particle glow
+            let d = distance(uv, pos);
+            let glow = exp(-d * d / (size * size * 0.15));
+            
+            // Small trail
+            let trail_dir = vec2<f32>(0.0, -1.0);
+            let to_uv = uv - pos;
+            let along = dot(to_uv, trail_dir);
+            if along > 0.0 && along < 0.015 {
+                let perp = length(to_uv - trail_dir * along);
+                let trail_fade = 1.0 - along / 0.015;
+                let trail_width = size * 0.3 * trail_fade;
+                let trail = exp(-perp * perp / (trail_width * trail_width)) * trail_fade * 0.4;
+                color = color + vec3<f32>(1.0, 0.85, 0.5) * trail * fade * 0.4;
+            }
+            
+            color = color + vec3<f32>(1.0, 0.85, 0.5) * glow * fade * twinkle * 0.7;
+        }
     }
     
-    // ===== GOLDEN FLOATING SPARKS (dense) =====
-    var sparks = 0.0;
-    for (var i = 0; i < 120; i++) {
-        sparks += spark(uv, time, f32(i));
+    // ===== TWINKLING STAR SPARKLES =====
+    for (var i = 0; i < 30; i++) {
+        let id = f32(i) + 100.0;
+        let h = hash3(vec2<f32>(id * 2.17, id * 1.31));
+        
+        let x = h.x + sin(time * 0.08 + id * 0.5) * 0.01;
+        let y = 0.28 + h.y * 0.60;
+        let pos = vec2<f32>(fract(x), y);
+        
+        let size = 0.002 + h.z * 0.003;
+        let rotation = time * (0.3 + h.x * 0.5);
+        
+        // Sharp twinkle - fully on/off
+        let twinkle_speed = 2.5 + h.y * 4.0;
+        let twinkle = pow(0.5 + 0.5 * sin(time * twinkle_speed + id * 11.0), 4.0);
+        
+        let star = star_shape(uv, pos, size, rotation) * twinkle;
+        
+        color = color + vec3<f32>(1.0, 0.92, 0.75) * star * 0.5;
     }
     
-    let spark_color = vec3<f32>(1.0, 0.75, 0.25);
-    color = color + spark_color * sparks * 0.7;
+    // ===== TINY FLOATING DUST =====
+    for (var i = 0; i < 50; i++) {
+        let id = f32(i) + 200.0;
+        let h = hash3(vec2<f32>(id, id * 0.5));
+        
+        let x = h.x + sin(time * 0.15 + id * 0.2) * 0.015;
+        let y = fract(h.y + time * 0.008 * (0.5 + h.z));
+        let pos = vec2<f32>(fract(x), y);
+        
+        if pos.y > 0.26 && pos.y < 0.88 {
+            let d = distance(uv, pos);
+            let size = 0.001 + h.z * 0.001;
+            let dust = exp(-d * d / (size * size * 0.2));
+            let fade = sin((pos.y - 0.26) / 0.62 * 3.14159) * 0.25;
+            
+            color = color + vec3<f32>(0.85, 0.8, 0.65) * dust * fade;
+        }
+    }
     
-    // ===== GOLDEN MIST/HAZE NEAR KEYBOARD =====
-    let smoke_val = smoke(uv, time);
-    let smoke_color = vec3<f32>(0.7, 0.55, 0.2);
-    color = color + smoke_color * smoke_val;
-    
-    // ===== AMBIENT GOLDEN HAZE AT KEYBOARD =====
-    let haze_dist = abs(uv.y - 0.18);
-    let haze = exp(-haze_dist * haze_dist * 80.0) * 0.08;
-    color = color + vec3<f32>(0.8, 0.6, 0.2) * haze;
+    // ===== VERY SUBTLE AMBIENT HAZE =====
+    let haze = smoothstep(0.12, 0.22, uv.y) * smoothstep(0.35, 0.22, uv.y);
+    color = color + golden * haze * 0.02;
     
     return vec4<f32>(color, 1.0);
 }

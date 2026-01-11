@@ -19,6 +19,9 @@ pub struct KeyboardRenderer {
 
     cache: Vec<QuadInstance>,
     text_cache: Vec<super::text::TextArea>,
+    
+    /// Whether to show octave labels (C1, C2, etc.) on keys
+    show_labels: bool,
 }
 
 impl KeyboardRenderer {
@@ -39,7 +42,14 @@ impl KeyboardRenderer {
             layout,
             cache,
             text_cache: Vec::new(),
+            show_labels: false, // Disabled by default for cleaner look
         }
+    }
+    
+    /// Set whether to show octave labels on keys
+    pub fn set_show_labels(&mut self, show: bool) {
+        self.show_labels = show;
+        self.text_cache.clear();
     }
 
     pub fn reset_notes(&mut self) {
@@ -175,7 +185,8 @@ impl KeyboardRenderer {
             self.rebuild_quad_cache();
         }
 
-        if self.text_cache.is_empty() {
+        // Only build text cache if labels are enabled
+        if self.show_labels && self.text_cache.is_empty() {
             self.rebuild_text_cache();
         }
 
@@ -184,7 +195,8 @@ impl KeyboardRenderer {
             quads.layer().extend(&self.cache);
         }
 
-        {
+        // Only render labels if enabled
+        if self.show_labels {
             profiling::scope!("push text from cache");
             text.queue_mut().extend_from_slice(&self.text_cache);
         }
