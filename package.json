@@ -1,0 +1,32 @@
+{
+  "name": "piano-animation",
+  "version": "1.0.0",
+  "description": "Beautiful piano visualization generator from MIDI and MP3 files",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/index.js"
+  },
+  "keywords": [
+    "piano",
+    "midi",
+    "visualization",
+    "music",
+    "animation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.170.0",
+    "tone": "^15.1.3",
+    "@tonejs/midi": "^2.0.28",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.11"
+  }
+}

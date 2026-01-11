@@ -1,0 +1,23 @@
+# Python Piano Visualization Requirements
+# 
+# For basic MIDI visualization, use requirements-core.txt instead
+# This file includes audio-to-MIDI conversion tools that require additional system libraries
+
+# Core dependencies (also in requirements-core.txt)
+numpy>=1.24.0
+matplotlib>=3.7.0
+
+# MIDI processing (also in requirements-core.txt)
+pretty-midi>=0.2.10
+mido>=1.3.0
+
+# Audio to MIDI conversion (requires OpenBLAS on macOS)
+# Install with: brew install openblas (macOS) or apt-get install libopenblas-dev (Linux)
+basic-pitch>=0.2.5
+librosa>=0.10.0
+
+# Optional: Advanced visualizations (also in requirements-core.txt)
+pypianoroll>=1.0.4
+
+# Video processing (also in requirements-core.txt)
+opencv-python>=4.8.0

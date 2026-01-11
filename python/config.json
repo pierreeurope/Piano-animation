@@ -1,0 +1,17 @@
+{
+  "background_color": "#1a1a2e",
+  "piano_color": "#2a2a3e",
+  "white_key_color": "#ffffff",
+  "black_key_color": "#1a1a1a",
+  "note_colors": [
+    "#667eea",
+    "#764ba2",
+    "#f093fb",
+    "#4facfe",
+    "#43e97b",
+    "#fa709a"
+  ],
+  "active_key_color": "#00ff88",
+  "grid_color": "#ffffff",
+  "grid_alpha": 0.1
+}

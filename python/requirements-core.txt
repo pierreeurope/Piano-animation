@@ -1,0 +1,16 @@
+# Core Python Piano Visualization Requirements
+# These are the essential packages needed for basic MIDI visualization
+
+# Core dependencies
+numpy>=1.24.0
+matplotlib>=3.7.0
+
+# MIDI processing
+pretty-midi>=0.2.10
+mido>=1.3.0
+
+# Optional: Advanced visualizations
+pypianoroll>=1.0.4
+
+# Video processing (if you want to use Python for video export)
+opencv-python>=4.8.0
