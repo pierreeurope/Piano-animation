@@ -1,0 +1,11 @@
+[package]
+name = "midi-file"
+version = "0.1.0"
+authors = ["Poly <bartek.marynczak@op.pl>"]
+edition.workspace = true
+
+[dependencies]
+midly.workspace = true
+
+[dev-dependencies]
+midi-io.workspace = true

@@ -6,3 +6,15 @@ uploads/
 output/
 .env
 python/venv/
+
+# Generated video outputs
+video_outputs/
+
+# Neothesia build artifacts
+neothesia-custom/target/
+
+# Example files
+example.mp4
+
+# Large binary files
+neothesia-custom/.github/app/

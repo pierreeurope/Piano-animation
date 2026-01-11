@@ -1,0 +1,8 @@
+[package]
+name = "nuon"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+euclid.workspace = true
+neothesia-image.workspace = true

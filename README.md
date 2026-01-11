@@ -1,147 +1,140 @@
-# Piano Animation - Beautiful Piano Visualizations
+# 🎹 Piano Visualizer
 
-Create stunning piano visualization videos from MIDI or MP3 files with customizable colors and effects.
+A premium MIDI piano visualizer that creates stunning videos with professional-quality effects, similar to popular YouTube piano channels.
 
-## Features
+![Inferno Theme](video_outputs/screenshot_inferno_v2.png)
 
-- **Multiple Visualization Engines**:
-  - Three.js WebGL 3D visualizer (high quality, web-based)
-  - Python-based visualizer (for video rendering)
+## ✨ Features
 
-- **Input Support**:
-  - MIDI files (direct input)
-  - MP3 files (automatic transcription to MIDI)
+- **Premium Visual Effects**: Horizontal scanline texture on notes, golden play line, circular glow effects
+- **Golden Particle System**: 120+ floating sparks with organic movement
+- **Clean Design**: Pure black background, no grid lines
+- **Multiple Themes**: Inferno (golden/amber), Neon, and more
+- **High Quality Output**: 1080p/4K video rendering with audio
 
-- **Customization**:
-  - Color schemes
-  - Particle effects
-  - Lighting effects
-  - Camera angles
-  - Volume control
+## 🚀 Quick Start
 
-- **Audio Playback**:
-  - Real-time piano sound synthesis
-  - Synchronized with visualization
-  - Adjustable volume
+### Prerequisites
 
-## Quick Start
+1. **Rust** (install via [rustup](https://rustup.rs/))
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
 
-### 1. Install Dependencies
+2. **FFmpeg** (for video encoding)
+   ```bash
+   # macOS
+   brew install ffmpeg
+   
+   # Ubuntu/Debian
+   sudo apt install ffmpeg
+   ```
 
-**Web Visualizer (Required):**
+### Build
+
+```bash
+cd neothesia-custom
+cargo build --release -p neothesia-cli
+```
+
+### Render a Video
+
+```bash
+cd neothesia-custom
+
+# Basic usage (with inferno theme)
+NEOTHESIA_THEME=inferno ./target/release/neothesia-cli your_midi.mid output.mp4 --soundfont default.sf2
+
+# Full HD with custom resolution
+NEOTHESIA_THEME=inferno ./target/release/neothesia-cli your_midi.mid output.mp4 --soundfont default.sf2 --width 1920 --height 1080
+
+# 4K rendering
+NEOTHESIA_THEME=inferno ./target/release/neothesia-cli your_midi.mid output.mp4 --soundfont default.sf2 --width 3840 --height 2160
+```
+
+### Available Themes
+
+| Theme | Description |
+|-------|-------------|
+| `inferno` | Golden/amber fire colors (recommended) |
+| `neon` | Cyan/magenta cyberpunk style |
+| `golden` | Elegant gold tones |
+
+Set theme via environment variable: `NEOTHESIA_THEME=inferno`
+
+## 🎨 Customization
+
+### Adding New Themes
+
+Edit `neothesia-custom/neothesia-core/src/config/model.rs` and add a new color schema function:
+
+```rust
+fn my_theme_color_schema() -> Vec<ColorSchemaV1> {
+    vec![
+        ColorSchemaV1 {
+            base: (R, G, B),   // Base color for white keys
+            dark: (R, G, B),   // Color for black keys
+        },
+        // Add more color variations...
+    ]
+}
+```
+
+### Shader Files
+
+- **Notes**: `neothesia-core/src/render/waterfall/pipeline/shader.wgsl`
+- **Background**: `neothesia-core/src/render/background_animation/shader.wgsl`
+- **Glow**: `neothesia-core/src/render/glow/shader.wgsl`
+
+## 📁 Project Structure
+
+```
+Piano-animation/
+├── neothesia-custom/       # Main visualizer (Rust/wgpu)
+│   ├── neothesia-cli/      # Command-line renderer
+│   ├── neothesia-core/     # Core rendering engine
+│   └── default.sf2         # Default SoundFont
+├── python/                 # MIDI utilities (deprecated)
+├── src/                    # Three.js version (deprecated)
+└── video_outputs/          # Generated videos (gitignored)
+```
+
+## 🔧 Troubleshooting
+
+### No sound in output
+Make sure to include `--soundfont default.sf2` in your command.
+
+### Build errors
+Ensure Rust is installed: `rustc --version`
+
+### Performance issues
+- Use `--width 1920 --height 1080` for balanced quality/speed
+- 4K rendering is slower but produces sharper output
+
+---
+
+## 📜 Deprecated: Legacy Versions
+
+### Python Visualizer (Deprecated)
+
+```bash
+cd python
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python visualizer.py your_midi.mid
+```
+
+### Three.js Web Version (Deprecated)
+
 ```bash
 npm install
-```
-
-**Python Features (Optional - for MP3 conversion and video rendering):**
-```bash
-# Install all Python dependencies at once
-pip install -r python/requirements.txt
-
-# Or install individually:
-pip install pretty-midi matplotlib numpy basic-pitch
-```
-
-**Note:** Python features are optional. The web visualizer works perfectly with just `npm install`.
-
-### 2. Run the Web Visualizer
-
-```bash
 npm run dev
+# Open http://localhost:5173
 ```
 
-Open your browser to `http://localhost:5173`
+---
 
-### 3. Use It
+## 📄 License
 
-1. Drag and drop a MIDI file into the browser
-2. Press Play to start (audio will begin after first user interaction)
-3. Enjoy the beautiful visualization with synchronized audio
-4. Customize colors, effects, and volume in the control panel
-5. Record with screen capture for videos
-
-## Project Structure
-
-```
-piano-animation/
-├── index.html              # Main web interface
-├── src/
-│   ├── main.js            # Application entry point
-│   ├── piano.js           # 3D piano keyboard
-│   ├── notes.js           # Falling notes system
-│   ├── effects.js         # Particle effects & lighting
-│   └── midi-parser.js     # MIDI file handling
-├── python/
-│   ├── visualizer.py      # Python-based visualizer
-│   └── mp3_to_midi.py     # MP3 to MIDI converter
-└── public/
-    └── fonts/             # Web fonts for UI
-```
-
-## Technologies Used
-
-- **Three.js** - 3D graphics rendering
-- **Tone.js** - MIDI parsing and audio playback
-- **Spotify Basic Pitch** - MP3 to MIDI transcription
-- **Vite** - Fast development server
-- **Python + Matplotlib** - Alternative rendering engine
-
-## What's Included
-
-✅ **Fully Functional Features**:
-- Web-based 3D visualizer with real-time controls
-- **Real-time audio playback** with piano sound synthesis
-- Python video renderer for YouTube-quality exports
-- MP3 to MIDI conversion using AI (Spotify Basic Pitch)
-- Customizable colors, effects, camera angles, and volume
-- Particle effects and dynamic lighting
-- Multiple visualization styles
-- Comprehensive documentation
-
-## Documentation
-
-- **[GET_STARTED.md](GET_STARTED.md)** - Start here! 2-minute quick start
-- **[USAGE_GUIDE.md](USAGE_GUIDE.md)** - Complete usage guide with examples
-- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Technical details and architecture
-
-## Examples
-
-### Convert MP3 to visualization:
-```bash
-python python/mp3_to_midi.py your-song.mp3
-npm run dev  # Then drag the generated MIDI file
-```
-
-### Create a YouTube video:
-```bash
-python python/visualizer.py song.mid -o output -t animated --fps 60
-```
-
-### Generate test MIDI file:
-```bash
-python python/generate_test_midi.py
-```
-
-## Tips
-
-- Get free MIDI files from [BitMidi](https://bitmidi.com/)
-- Best MP3 conversion results with piano-only recordings
-- Use the web visualizer for experimentation
-- Use the Python visualizer for final video exports
-- Customize colors in `python/config.json` for consistent branding
-
-## Screenshots & Demo
-
-The web visualizer features:
-- 88-key 3D piano with realistic lighting
-- **Real-time audio playback** synchronized with visuals
-- Falling notes (Guitar Hero style)
-- Particle effects on key presses
-- Dynamic spotlights that follow the music
-- Real-time color customization
-- Volume control
-- Multiple camera presets
-
-## License
-
-MIT
+Based on [Neothesia](https://github.com/PolyMeilex/Neothesia) (GPL-3.0).
